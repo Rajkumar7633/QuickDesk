@@ -1,71 +1,36 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useParams } from "next/navigation"
-import { TicketDetail } from "@/components/tickets/ticket-detail"
-import { Card, CardContent } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useRealtimeStore } from "@/lib/realtime-store"
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { TicketDetail } from "@/components/tickets/ticket-detail";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useRealtimeStore } from "@/lib/realtime-store";
 
 export default function TicketDetailPage() {
-  const params = useParams()
-  const ticketId = Number(params.id)
-  const [loading, setLoading] = useState(false)
+  const params = useParams();
+  const ticketId = Number(params.id);
+  const [loading, setLoading] = useState(true);
 
-  const { tickets, comments, currentUser, updateTicket, addComment } = useRealtimeStore()
+  const { setTickets } = useRealtimeStore();
 
-  const ticket = tickets.find((t) => t.id === ticketId)
-  const ticketComments = comments[ticketId] || []
+  // Load tickets when component mounts
+  useEffect(() => {
+    const loadTickets = async () => {
+      try {
+        // Simulating API call - replace this with your actual API call
+        const response = await fetch("/api/tickets");
+        const data = await response.json();
+        setTickets(data);
+      } catch (error) {
+        console.error("Failed to load tickets:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const mockCurrentUser = currentUser || {
-    id: 2,
-    role: "agent",
-    full_name: "Support Agent",
-  }
-
-  const handleUpdateStatus = async (status: string) => {
-    if (ticket) {
-      updateTicket(ticket.id, { status })
-    }
-  }
-
-  const handleAddComment = async (comment: string, isInternal: boolean) => {
-    if (!currentUser) return
-
-    const newComment = {
-      id: Date.now(),
-      ticket_id: ticketId,
-      user_id: currentUser.id,
-      user_name: currentUser.full_name,
-      user_role: currentUser.role,
-      comment,
-      is_internal: isInternal,
-      created_at: new Date().toISOString(),
-    }
-    addComment(newComment)
-  }
-
-  const handleVote = async (voteType: "up" | "down") => {
-    if (ticket) {
-      updateTicket(ticket.id, {
-        upvotes: voteType === "up" ? ticket.upvotes + 1 : ticket.upvotes,
-        downvotes: voteType === "down" ? ticket.downvotes + 1 : ticket.downvotes,
-      })
-    }
-  }
-
-  if (!ticket) {
-    return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <h3 className="text-lg font-semibold mb-2">Ticket Not Found</h3>
-            <p className="text-muted-foreground">The ticket you're looking for doesn't exist or has been removed.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+    loadTickets();
+  }, [setTickets]);
 
   if (loading) {
     return (
@@ -78,19 +43,12 @@ export default function TicketDetailPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <TicketDetail
-        ticket={ticket}
-        comments={ticketComments}
-        currentUser={mockCurrentUser}
-        onUpdateStatus={handleUpdateStatus}
-        onAddComment={handleAddComment}
-        onVote={handleVote}
-      />
+      <TicketDetail ticketId={ticketId} />
     </div>
-  )
+  );
 }
